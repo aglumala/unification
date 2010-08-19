@@ -1,0 +1,34 @@
+INFO main org.algorithm.impl.WSDLParser3 - Logging initialized.
+INFO main org.algorithm.impl.WSDLParser3 - Log4JExample - leaving the constructor ...
+INFO main org.algorithm.impl.WSDLParser3 - Logging initialized.
+INFO main org.algorithm.impl.WSDLParser3 - Log4JExample - leaving the constructor ...
+INFO main org.algorithm.impl.WSDLParser3 - Complex (contactInfo) Matched (CountryListRequest) From WSDL (http://www.allysoft.ru/XML/Connector.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (CityByNameListRequest) From WSDL (http://www.allysoft.ru/XML/Connector.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (contactInfo) Matched (GuestInfo) From WSDL (http://ws1.touricoholidays.com/HotelsService.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (contactInfo) Matched (ClientInfo) From WSDL (http://ws1.touricoholidays.com/HotelsService.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (searchForHotel) Matched (SearchHotels) From WSDL (http://ws1.touricoholidays.com/HotelsService.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (rentCar) Matched (GetAffiliateAvailabilityByDestinationName) From WSDL (http://xml.alpharooms.com/affiliate.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (rentCar) Matched (GetAffiliateAvailability) From WSDL (http://xml.alpharooms.com/affiliate.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (roomInfo) Matched (GetSPOPageByKey) From WSDL (http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetPackages) From WSDL (http://webservice.dirs21.de/getdata.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (Download) From WSDL (http://webservice.dirs21.de/getdata.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (ArrayOfDownload) From WSDL (http://webservice.dirs21.de/getdata.asmx?wsdl
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetAirportsListForCountryName) From WSDL (http://www.club7holidays.co.in/Services/LocalServices.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetStatesByCountryId) From WSDL (http://www.club7holidays.co.in/Services/LocalServices.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (ConvertCurrency) From WSDL (http://www.club7holidays.co.in/Services/LocalServices.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (roomInfo) Matched (RequestPriceForStandardAllocation) From WSDL (http://www.railtour.ch/booking/GenvasService.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (searchForCar) Matched (RqPackagePrice) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (contactInfo) Matched (CheckUserAuthentication) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (contactInfo) Matched (DeleteUserHotel) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (roomInfo) Matched (RqRoom) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (DtoRegion) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetAllHotels) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetAllUser) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (GetAllGroups) From WSDL (http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (roomInfo) Matched (GetSPOPageByKey) From WSDL (http://online.inna.ru:83/Service.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (searchForFlight) Matched (getBookings) From WSDL (http://www.e-travelsolution.com/xml/xmlservice1-2.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (searchForFlight) Matched (Tours) From WSDL (http://www.e-travelsolution.com/xml/xmlservice1-2.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (ParagraphType) From WSDL (http://cert.synxis.com/interface/ChannelConnect.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (Address) From WSDL (http://cert.synxis.com/interface/ChannelConnect.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (ParagraphType) From WSDL (http://cert.synxis.com/interface/ota2004aservice.asmx?WSDL
+INFO main org.algorithm.impl.WSDLParser3 - Complex (findDistance) Matched (Address) From WSDL (http://cert.synxis.com/interface/ota2004aservice.asmx?WSDL

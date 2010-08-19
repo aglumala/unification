@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<s:schema xmlns:s="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://xml.netbeans.org/schema/travelplan"
+    xmlns:tns="http://xml.netbeans.org/schema/travelplan"
+    elementFormDefault="qualified">
+    <s:complexType name="searchForFlight">
+        <s:sequence>
+            <s:element name="deptDate" type="s:dateTime"/>
+            <s:element name="arvDate" type="s:dateTime"/>
+            <s:element name="origin" type="s:string"/>
+            <s:element name="destn" type="s:string"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="bookFlight">
+        <s:sequence>
+            <s:element name="searchflight" type="tns:searchForFlight"/>
+            <s:element name="vegMeal" type="s:boolean"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="searchForHotel">
+        <s:sequence>
+        	<s:element name="destination" type="s:string"/>
+        	<s:element name="hotelCity" type="s:string"/>
+        	<s:element name="hoteLocation" type="s:string"/>
+        	<s:element name="hotelName" type="s:string"/>
+        	<s:element name="chkInDate" type="s:date"/>
+            <s:element name="chkOutDate" type="s:date"/>
+            <s:element name="roomInfo" type="tns:roomInfo"/>
+            <s:element name="maxPrice" type="s:decimal"/>
+            <s:element name="starLevel" type="s:decimal"/>
+            <s:element name="Available" type="s:boolean"/>
+          </s:sequence>
+       </s:complexType>
+   <s:complexType name="bedType">
+		<s:restriction base="s:string">
+			<s:enumeration value="NotRelevant"/>
+			<s:enumeration value="TwinBeds"/>
+			<s:enumeration value="DoubleBed"/>
+		</s:restriction>
+	</s:complexType>
+     <s:complexType name="roomInfo">
+            <s:sequence>
+            <s:element name="adults" type="s:int"/>
+            <s:element name="children" type="s:int"/>
+            <s:element name="ages" type="s:int"/>
+            </s:sequence>
+        </s:complexType>
+  
+      <s:complexType name="bookHotel">
+        <s:sequence>
+          	<s:element name="contactInfo" type="s:int"/>
+            <s:element name="chkInDate" type="s:date"/>
+            <s:element name="chkOutDate" type="s:date"/>
+            <s:element name="roomInfo" type="tns:roomInfo"/>
+            <s:element name="bedType" type="tns:bedType"/>
+            <s:element name="maxPrice" type="s:decimal"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="clientInfo">
+        <s:sequence>
+        	<s:element name="name" type="s:string"/>
+            <s:element name="city" type="s:string"/>
+            <s:element name="state" type="s:string"/>
+            <s:element name="zip" type="s:string"/>
+            <s:element name="country" type="s:string"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="searchForCar">
+        <s:sequence>
+            <s:element name="statDate" type="s:dateTime"/>
+            <s:element name="endDate" type="s:dateTime"/>
+            <s:element name="Address" type="tns:Address"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="rentCar">
+        <s:sequence>
+            <s:element name="statDate" type="s:dateTime"/>
+            <s:element name="endDate" type="s:dateTime"/>
+            <s:element name="city" type="s:string"/>
+        </s:sequence>
+    </s:complexType>
+    <s:complexType name="findDistance">
+        <s:sequence>
+            <s:element name="statLocation" type="s:string"/>
+            <s:element name="endLocation" type="s:string"/>
+            <s:element name="result" type="s:string"/>
+        </s:sequence>
+    </s:complexType>
+</s:schema>

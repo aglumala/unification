@@ -1,0 +1,1339 @@
+package org.algorithm.impl;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.algorirthm.util.Log4JExample;
+import org.algorithm.impl.SimpleTypeImp.Simple;
+import org.algorithm.intf.SimpleType;
+import org.algorithm.intf.Type;
+import org.jdom.Attribute;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.Namespace;
+import org.jdom.input.SAXBuilder;
+
+
+//Main Parser class for wsdl
+public class WSDLParser3 {
+	/*map contains all the Types obtained from a given wsdl.
+	 * You could persist it every time you finish parsing a wsdl to permanently store parsed records.
+	 * acts as an abstract dictionary
+	 */
+	public static final Log4JExample log4JExample;
+	
+	static{
+		 log4JExample=new Log4JExample();
+	}
+	
+	private Map<String, Type> localMap=null;
+	
+	public  Map<String, Type> getTypeMap(){
+		return localMap;
+	}
+public void process(Element element, Map<String, Type> localMap) {
+	
+	inspectHybrid(element, localMap);
+    
+    List content = element.getContent();
+    Iterator iterator = content.iterator();
+    
+    while (iterator.hasNext()) {
+      Object o = iterator.next();
+      if (o instanceof Element) {
+        Element child = (Element) o;
+        process(child, localMap);
+        
+      }
+    }
+  }
+//assumption:the elements in the each original complex type are all simple types
+public List<Type> getAllTNS(Map<String, Type> localMap, String tnsType){
+	
+	List<Type> types=new ArrayList<Type>();
+	if(tnsType.startsWith("tns:")){
+		
+		String tnsName=tnsType.substring(tnsType.indexOf(":")+1);
+		
+
+		  if(localMap.containsKey(tnsName.trim())){
+				
+				Type originalComplex=localMap.get(tnsName.trim());
+				if(originalComplex instanceof SequenceType){
+					
+					SequenceType t1=(SequenceType)originalComplex;
+					
+					return t1.getElements();
+				}
+				if(originalComplex instanceof ChoiceType){
+					
+					ChoiceType t2=(ChoiceType)originalComplex;
+					
+					return t2.getElements();
+				}
+				if(originalComplex instanceof AllComplexType){
+					
+					AllComplexType t3=(AllComplexType)originalComplex;
+					
+					return t3.getElements();
+				}
+		  }
+		  
+	}
+	 
+	return types; //will always be an empty set.
+	
+}
+public  void inspectHybrid(Element element, Map<String, Type> localMap) { 
+	
+	  	SimpleTypeImp simple=null;
+	  	SequenceType seqComplex=null;
+	    
+	    String type=null;
+	    Namespace namespace = element.getNamespace();
+	    try{ //all adElementType() methods will throw  a CannotAddTypeToCollectionException
+			
+	    	
+	    if (namespace != Namespace.NO_NAMESPACE) {
+	      
+	      String elementName=element.getAttributeValue("name");
+	      
+	      Element parentElement=element.getParent();
+	     
+	      //handle sequence element <schema><complex><sequence><element>...</element></sequence></complex>....</schema>
+	      if(parentElement!=null && parentElement.getName().equals("sequence")){
+	    	  
+	    	  type=getTypeAttribute(element);
+	    	  
+	    	  Element parent2=parentElement.getParent();
+	    	  
+	    	  if(parent2!=null && parent2.getName().equals("complexType")){
+	    		  
+	    		  Element parent3=parent2.getParent();
+	    		  
+	    		  if(parent3!=null && parent3.getName().equals("element")){
+	    			  
+	    			  String complexTypeName=parent3.getAttributeValue("name");
+	    			  
+	    			if(type!=null){
+	    				
+	    				if(localMap.containsKey(complexTypeName)){
+	    					
+	    					  Type complexType=localMap.get(complexTypeName);
+	    					  if(complexType instanceof SequenceType){
+	    						 
+	    						  List<Type> elements=getAllTNS(localMap, type);
+	    						  
+	    						  if(elements!=null){
+
+	    							  for (Type simpleType : elements) {
+	    								  if(simpleType instanceof SimpleTypeImp){
+	    									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+	    									  
+	    									  ((SequenceType)complexType).addElementType(simp.getTypeName(), simp.getName());
+	    								  }
+	    							}
+	    						  }
+	    						  ((SequenceType)complexType).addElementType(type, elementName);
+								localMap.put(complexTypeName, complexType);
+	    					  }
+	    					  
+	    				 }else{	  
+	    					seqComplex=new SequenceType();
+	    			    	seqComplex.setName(complexTypeName);
+	    			    	 //check for TNS first
+	    			    	List<Type> elements=getAllTNS(localMap, type);
+	    			    	
+	    			    	if(elements!=null){
+  							  for (Type simpleType : elements) {
+  								  if(simpleType instanceof SimpleTypeImp){
+  									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+  									  seqComplex.addElementType(simp.getTypeName(), simp.getName());
+  								  }
+  							  }
+  						  	}
+	    			    	seqComplex.addElementType(type, elementName);
+							localMap.put(complexTypeName, seqComplex);
+	    			    	  
+	    				  }
+	    				    				 
+	    			  	  //System.out.println(" Sequence Element=("+parent3.getName()+") Name =("+complexTypeName+")");
+	    			  
+	    				}
+	    			
+	    		  }else if(parent3!=null && parent3.getName().equals("schema")){
+	    			  
+	    			  String complexTypeName=parent2.getAttributeValue("name");    			  
+	    			 
+	    			  if(type!=null){
+	    				  //set the name of the sequence complex type
+		    			 
+	    				  //simple=new SimpleTypeImp(type, elementName);
+	    				if(localMap.containsKey(complexTypeName)){
+	    					
+	    					  Type complexType=localMap.get(complexTypeName);
+	    					  
+	    					  if(complexType instanceof SequenceType){
+	    						  
+	    						  SequenceType seq=(SequenceType)complexType;
+	    						  seq.addElementType(type, elementName);
+	    						  
+	    						  //check for TNS first
+	    						  List<Type> elements=getAllTNS(localMap, type);
+	    						 // log4JExample.log(type+" SEQUENCE PLAIN LIST SIZE "+elements.size());
+	    						  if(elements!=null){
+	    							  for (Type simpleType : elements) {
+	    								  if(simpleType instanceof SimpleTypeImp){
+	    									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+	    									  seq.addElementType(simp.getSimple().getTypeName(), simp.getName());
+	    									  
+	    								  }
+	    							}
+	    							  
+	    							  for(Type type2 : seq.getElements()) {
+	    								  SimpleTypeImp simp2=(SimpleTypeImp)type2;
+	    								  System.out.println(seq.getName()+" ELEMENT ( "+simp2.getName()+") TYPE ("+simp2.getSimple().getTypeName()+")");
+	    									 
+	    							  }
+	    							  
+	    						  }
+	    						
+	    						  
+	    						  
+	    						  
+	    						  localMap.put(complexTypeName, complexType);
+	    					  }
+	    				  }else{	  
+	    					seqComplex=new SequenceType();
+	    			    	seqComplex.setName(complexTypeName);
+	    			    	 //check for TNS first
+	    			    	List<Type> elements=getAllTNS(localMap, type);
+	    			    	//log4JExample.log(type+" SEQUENCE REST LIST SIZE "+elements.size());
+  						  	if(elements!=null){
+  							  for (Type simpleType : elements) {
+  								  
+  								  if(simpleType instanceof SimpleTypeImp){
+  									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+  									  //System.out.println(seqComplex.getName()+" ADDING ELEMENT "+simp.getSimple().getTypeName()+" "+simp.getName());
+  									  seqComplex.addElementType(simp.getSimple().getTypeName(), simp.getName());
+  								  }
+  							  }
+  						  	}
+	    			    	seqComplex.addElementType(type, elementName);
+							localMap.put(complexTypeName, seqComplex);
+	    			    	  
+	    				  }
+		    			//System.out.println(" Sequence Element=("+parent3.getName()+") Name =("+complexTypeName+")");
+		    			}
+	    			  //System.out.println();
+	    		  }
+	    		  
+	   //handle sequence element <schema><complex><complexContent><extension><sequence><element>...
+	    //</element></sequence></extension></complexContent></complex>....</schema>
+	    	      	  
+	    	  }else if(parent2!=null && parent2.getName().equals("extension")){
+	    		  
+	    		  Element parentExt=parent2.getParent();
+	    		  if(parentExt!=null && parentExt.getName().equals("complexContent")){
+	    			  
+	    			  Element parentCmplxContent=parentExt.getParent();
+	    			  
+	    			  if(parentCmplxContent!=null && parentCmplxContent.getName().equals("complexType")){
+	    				  	
+	    				  String complexTypeName=parentCmplxContent.getAttributeValue("name");
+	    				  if(type!=null){
+	    					  //simple=new SimpleTypeImp(type, elementName);
+	    					  
+	    					  
+		    				  if(localMap.containsKey(complexTypeName)){
+		    					  Type complexType=localMap.get(complexTypeName);
+		    					  if(complexType instanceof SequenceType){
+		    						  //check for TNS first
+		    						  List<Type> elements=getAllTNS(localMap, type);
+		    						  if(elements!=null){
+		    							  for (Type simpleType : elements) {
+		    								  if(simpleType instanceof SimpleTypeImp){
+		    									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+		    									  ((SequenceType)complexType).addElementType(simp.getSimple().getTypeName(), simp.getName());
+		    								  }
+		    							}
+		    						  }
+		    						  ((SequenceType)complexType).addElementType(type, elementName);
+		    						  localMap.put(complexTypeName, complexType);
+		    					  }
+		    				  }else{	  
+		    					seqComplex=new SequenceType();
+		    			    	seqComplex.setName(complexTypeName);
+		    			    	
+		    			    	 //check for TNS first
+		    			    	List<Type> elements=getAllTNS(localMap, type);
+	    						  if(elements!=null){
+	    							  for (Type simpleType : elements) {
+	    								  if(simpleType instanceof SimpleTypeImp){
+	    									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+	    									  seqComplex.addElementType(simp.getSimple().getTypeName(), simp.getName());
+	    								  }
+	    							}
+	    						  }
+		    			    	seqComplex.addElementType(type, elementName);
+		    			    	localMap.put(complexTypeName, seqComplex);
+		    			    	 
+		    				  }
+			    			}
+	    				  
+	    			  }
+	    		  }
+	    	  }
+	     }
+	     
+	      handleStandaloneElement(element, localMap);
+	      handleChoiceElement(element, localMap);
+	      handleAllComplex(element, localMap);
+	    }
+	    
+  		} catch (CannotAddTypeToCollectionException e) {
+		
+  			e.printStackTrace();
+  		}
+	   
+	  }
+  private void handleAllComplex(Element element, Map<String, Type> localMap){
+	  String type=null;
+	  String elementName=null;
+	  Element parentElement=element.getParent();
+	  AllComplexType allComplex=null;
+
+ 	 try {
+	  if(element.getName().equals("element")&& parentElement!=null && parentElement.getName().equals("all")&&
+			  parentElement.getParent().getName().equals("complexType") 
+			  && parentElement.getParent().getParent().getName().equals("schema")){
+		  
+		  String allComplexTypeName=parentElement.getParent().getAttributeValue("name");
+		
+		  type = getTypeAttribute(element);
+		
+		  elementName=element.getAttributeValue("name"); //the element name is not stored in the simpletype 4now
+		if(type!=null){
+			
+			if(localMap.containsKey(allComplexTypeName)){
+				  Type complexType=localMap.get(allComplexTypeName);
+				  if(complexType instanceof AllComplexType){
+					 List<Type> elements=getAllTNS(localMap, type);
+						  if(elements!=null){
+							  for (Type simpleType : elements) {
+								  if(simpleType instanceof SimpleTypeImp){
+									  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+									  ((AllComplexType)complexType).addElementType(simp.getSimple().getTypeName(), simp.getName());
+								  }
+							}
+					 }
+						  
+					((AllComplexType)complexType).addElementType(type, elementName);
+					
+					 localMap.put(allComplexTypeName, complexType);
+				  }
+			  }else{
+				  allComplex=new AllComplexType();
+				  allComplex.setName(allComplexTypeName);
+				  List<Type> elements=getAllTNS(localMap, type);
+				  
+				  if(elements!=null){
+					  for (Type simpleType : elements) {
+						  if(simpleType instanceof SimpleTypeImp){
+							  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+							  allComplex.addElementType(simp.getSimple().getTypeName(), simp.getName());
+						  }
+					}
+				  }
+		    	allComplex.addElementType(type, elementName);
+				localMap.put(allComplexTypeName, allComplex);
+		    }
+		}
+	 }
+	  } catch (CannotAddTypeToCollectionException e) {
+			
+			e.printStackTrace();
+  	 }
+  }
+  private void handleStandaloneElement(Element element, Map<String, Type> localMap){
+	  
+	  String type=null;
+	  Element parentElement=element.getParent();
+	  SimpleTypeImp simpleType=null;
+	  
+	//handle standalone element without restrictions
+      if(element.getName().equals("element")&& parentElement!=null && parentElement.getName().equals("schema")&& element.getChildren().isEmpty()){
+    	  
+    	  String name=element.getAttributeValue("name");
+    	  type=getTypeAttribute(element);
+    	  //System.out.println("Simple Element= ("+element.getName()+") Name = ("+name+")");
+    	  
+    	  //create a simple type
+    	  simpleType=new SimpleTypeImp(type, name);
+    	  //add it to the type set.
+    	  localMap.put(name, simpleType);
+    	  //System.out.println();
+    	  
+      }
+      if(parentElement!=null && parentElement.getName().equals("restriction")){
+    	  
+    	  type=parentElement.getAttributeValue("base");
+    	  
+    	  Element restrictionParent=parentElement.getParent();
+    	  if(restrictionParent!=null && restrictionParent.getName().equals("simpleType")){
+    		  
+    		  String name=restrictionParent.getAttributeValue("name");
+    		  if(restrictionParent.getParent()!=null && restrictionParent.getParent().getName().equals("schema")){
+    			  //create a simple type with restrictions
+    			  
+    			  simpleType=new SimpleTypeImp(type, name);
+        		  
+        		  localMap.put(name, simpleType);
+        		  
+    		  }
+    	  }
+    }
+  }
+  private void handleChoiceElement(Element element, Map<String, Type> localMap){
+	
+	  String name=element.getAttributeValue("name");
+	
+	  SimpleType simple=null;
+	  ChoiceType choiceComplex=null;
+	  String type=null;
+	  Element parentElement=element.getParent();
+	  
+	  try { 
+	  
+      if(element.getName().equals("element")&& parentElement!=null && parentElement.getName().equals("choice")){
+    	  
+    	  choiceComplex=new ChoiceType();
+    	  
+    	  type=getTypeAttribute(element);
+    	 // System.out.println("TYPE "+type);
+    	  
+    	  Element parent2=parentElement.getParent();
+    	  if(parent2!=null && parent2.getName().equals("complexType")){
+    		  
+    		  //System.out.println("Complex Element "+parent2.getQualifiedName());
+    		  Element parent3=parent2.getParent();
+    		  
+    		  if(parent3!=null && parent3.getName().equals("element")){
+    			  
+    			 // System.out.println("TYPE 1 CHOICE");
+    			  String complexTypeName=parent3.getAttributeValue("name");
+    			  //System.out.println("Parent Element =("+parent3.getName()+") Name =("+complexTypeName+")");  
+    			  if(type!=null){
+	    			//Create Sequence type
+	    			//simple=new SimpleTypeImp(type, name);
+	    			
+	    				 List<Type> elements=getAllTNS(localMap, type);
+	   				  
+	   				  if(elements!=null){
+	   					  for (Type simpleType : elements) {
+	   						  if(simpleType instanceof SimpleTypeImp){
+	   							  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+	   							  choiceComplex.addElementType(simp.getSimple().getTypeName(), simp.getName());
+	   						  }
+	   					}
+	   				  }
+					choiceComplex.addElementType(type, name);
+					
+	    			choiceComplex.setName(complexTypeName);
+	    			//add the choice complex to the map
+	    			localMap.put(complexTypeName, choiceComplex);
+	    			
+	    			//System.out.println(" Choice Element=("+parent3.getName()+") Name =("+complexTypeName+")");
+	    			
+	    		}
+    			  //System.out.println();
+    		}else if(parent3!=null && parent3.getName().equals("schema")){
+    			  
+    			  //System.out.println("TYPE 2 CHOICE");
+    			  String complexTypeName=parent2.getAttributeValue("name");
+    			  
+    			getAllTNS(localMap, type);
+    			 List<Type> elements=getAllTNS(localMap, type);
+  				  
+  				  if(elements!=null){
+  					  for (Type simpleType : elements) {
+  						  if(simpleType instanceof SimpleTypeImp){
+  							  SimpleTypeImp simp=(SimpleTypeImp)simpleType;
+  							  choiceComplex.addElementType(simp.getSimple().getTypeName(), simp.getName());
+  						  }
+  					}
+  				  }
+				choiceComplex.addElementType(type, name);
+    			//add the choice complex to the set
+    			localMap.put(complexTypeName, choiceComplex);		  
+    		}
+    	  }
+      }
+      } catch (CannotAddTypeToCollectionException e) {
+			
+		  e.printStackTrace();
+	  }
+  }
+  
+  private  String getTypeAttribute(Element element){
+	  List attributes = element.getAttributes();
+	  String value=null;
+	    if (!attributes.isEmpty()) {
+	      Iterator iterator = attributes.iterator();
+	      while (iterator.hasNext()) {
+	        Attribute attribute = (Attribute) iterator.next();
+	        String name = attribute.getName();
+	        value = attribute.getValue();
+	        
+	        Namespace attributeNamespace = attribute.getNamespace();
+	        
+	        if (attributeNamespace == Namespace.NO_NAMESPACE) {
+	        
+	        	if("type".equals(name)){
+	        	  //get the type of the element
+	        	  //System.out.println("TYPE "+value);
+	        	 return value;
+	        	}
+	        }
+	        else {
+	          String prefix = attributeNamespace.getPrefix();
+	          
+	          if("type".equals(name)){
+	        	  //System.out.println("TYPE "+value);
+	        	  //System.out.println("  " + prefix + ":" + name + "=\"" + value + "\"");
+	        	  return value;      	   
+	          }	          
+	        }
+	      }
+	    }
+	    
+	    return value;
+  }
+  public static void main(String[] args) {
+	  
+		
+	  	String plan="file:///home/lumala/Desktop/unifalgo/TypeEquivFinal/sampleFiles/TravelScenario2.xsd";
+		 
+		 // String plan="http://ws.henoo.net/flights.asmx?wsdl";
+		 //String plan="C:/eclipseProjects/TypeEquiv/sampleFiles/benchMarkTackerXMLSchema.xsd";
+		 final Set<TypeMap> parsedWsdlSet=new HashSet<TypeMap>();
+		 String[] wsdlURL={
+				 plan,
+				 /*"http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL",
+				 "http://hotels.ws.ctrip.com/hotelservice.asmx?WSDL",
+				 "http://www.allysoft.ru/XML/Connector.asmx?WSDL",
+				 "http://www.17u.cn/TongchengBookService.asmx?WSDL",*/
+				 "http://ws1.touricoholidays.com/HotelsService.asmx?wsdl",
+				 /*"http://test.bookingbooster.net/bookingbooster-ws/service/availRates.wsdl",
+				 "http://xml.alpharooms.com/affiliate.asmx?WSDL",
+				 "http://zelsoft.ru/InTourXml/BookingService.asmx?WSDL",
+				 "https://www.rezidorsas.com/booking/wsdl/WBIBookingServices_v1.7.wsdl",
+				 "http://www.e-travelsolution.com/xml/xmlservice1-2.asmx?WSDL",
+			     "http://www.railtour.ch/booking/GenvasService.asmx?WSDL",
+				 "https://www.travelsoft.co.za/BookingEngineWebServices/BookingEngineWebService.asmx?WSDL",
+				 "http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+				 "http://81.144.197.83/blackbox2/contract?WSDL",
+				 "http://webservice.dirs21.de/getdata.asmx?wsdl",
+				 "http://online.inna.ru:83/Service.asmx?WSDL",
+				 "http://cert.synxis.com/interface/ChannelConnect.asmx?WSDL",
+				 "http://81.144.197.83/blackbox2/basket?WSDL",
+				 "http://www.quickrooms.com/AjaxHits.asmx?WSDL",
+				 "http://81.144.197.83/blackbox2/blackbox?WSDL",
+				 "http://www.club7holidays.co.in/Services/LocalServices.asmx?WSDL",
+				 "http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL",
+				 "http://cert.synxis.com/interface/ota2004aservice.asmx?WSDL",
+				 "http://cluster.turystyka.com.pl/~easytest2/services/index.php?wsdl",
+				 "http://www.resdirect.co.uk/webservices/bookinginfo.asmx?WSDL",
+				 "http://cluster.turystyka.com.pl/~pegastest2/services/index.php?wsdl",
+				 "http://ult-sun-api.test.delight.be/mainservice/snowapi.asmx?wsdl",
+				 "http://www.webhotelplus.com/hotelmercado_ws/hotelmercado_ws.asmx?wsdl",
+				 "http://training.costaclick.net/WAWS_1_7/Availability.asmx?WSDL",
+				 "http://xml.majesticusa.com/service.asmx?WSDL",
+				 "http://www.ebos.com.cy/seawise/seawiseservice.asmx?WSDL",
+				 	"http://www.roomex.com/services/LocationService.asmx?WSDL",
+				 	"http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+				 	"http://xyz1.ws.symphony.cz/symphony/0.11/production/webservices/symphony_011?WSDL",
+				 	"http://bc.ws.symphony.cz/symphony/0.10/training/webservices/symphony_010?WSDL",
+				 	"http://bc.ws.symphony.cz/symphony/0.9/training/ws/symphony?WSDL",
+				 	"http://tvazteca.viajez.com/WServicesDev/TicketRetrieve?WSDL",
+				 	"http://www.carrentals.com/services/Reservations?wsdl",
+				 	"http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL",
+				 	"http://cluster.turystyka.com.pl/~easytest2/services/index.php?wsdl",
+				 	"http://cluster.turystyka.com.pl/~pegastest2/services/index.php?wsdl",
+				 	"http://ult-sun-api.test.delight.be/mainservice/snowapi.asmx?wsdl",
+				 	"http://webservice.elsyarres.com/elsyarreswebservice.asmx?WSDL",
+				 	"http://webconnect.akbartravelsonline.com/service.asmx?WSDL",
+				 	"http://webservices.sembo.se/partners/flight.asmx?WSDL",
+				 	"http://www.aironline.pl/server/booking.php?wsdl",
+				 	"http://www.allies-computing.co.uk/WebsoapNearest/Nearest.asmx?WSDL",
+				 	"http://sampleserver1.arcgisonline.com/ArcGIS/services/Portland/ESRI_LandBase_WebMercator/MapServer?wsdl",
+				 	"http://ws1.touricoholidays.com/HotelsService.asmx?wsdl",
+				 	"http://prep-mappe.regione.vda.it/ArcGIS/services/infotraffic/InfoTrafficOverview/MapServer?wsdl",
+					 "http://beeinnet.com/ws/DataProvider.asmx?WSDL",
+					 "http://www.allysoft.ru/XML/Connector.asmx?WSDL",
+					 "http://ws.henoo.net/hotels.asmx?WSDL",
+					 "http://hotels.ws.ctrip.com/hotelservice.asmx?WSDL",
+					"http://xml.dev.hoteldo.com/HotelDoInterface.asmx?WSDL",
+					 "http://api.rakuten.co.jp/rws/soap/VacantHotelSearch/2008-02-14?wsdl",
+					 "http://api.rakuten.co.jp/rws/soap/SimpleHotelSearch/2007-11-21?wsdl",
+					 "http://api.rakuten.co.jp/rws/soap/KeywordHotelSearch/2007-09-19?wsdl",
+					 "http://api.rakuten.co.jp/rws/soap/HotelDetailSearch/2007-11-21?wsdl",
+					 "http://www.reisbillig.no/Hotel.asmx?WSDL",
+					 "http://www.hotel-madeleine.de/Webservices/wsMadeleine.asmx?WSDL",
+					"http://www.turne.com.ua/WebServices/HotelClassCategory.asmx?WSDL",
+					 "http://apimicrosites.vivatours.es/ApiAvionMasHotel.asmx?WSDL",
+					 "http://otawebservice.hotelconnect.co.uk:3380/hotelconnect.asmx<?WSDL",
+					 "http://www.e-travelsolution.com/xml/xmlPostHotel.asmx?WSDL",
+					 "http://www.e-travelsolution.com/xml/xmlservice1-2.asmx?WSDL",
+					 "http://xml.alpharooms.com/affiliate.asmx?WSDL",
+					 "http://www.ebos.com.cy/seawise/seawiseservice.asmx?WSDL",
+					 "http://www.xdcpro.com/src/ws/PropertyDescription/Propertydescription.asmx?WSDL",
+					 "http://services.odeontours.com.tr/OdeonWebService.asmx?WSDL",
+					 "http://xml.majesticusa.com/service.asmx?WSDL",
+					 "http://cert.synxis.com/interface/ota2004aservice.asmx?WSDL",
+					 "http://maps.tourismus-landkreis-kelheim.de/MapAjaxService.asmx?WSDL",
+					 "http://ws.dp.advences.com/productList.asmx?WSDL",
+					 "http://fboweb.com/ws/ca.asmx?WSDL",
+					 "http://www.tourne.com.ua/WebServices/TourService.asmx?WSDL",
+					 "http://www.turne.com.ua/WebServices/TourService.asmx?wsdl",
+					 "http://cert.synxis.com/interface/ChannelConnect.asmx?WSDL",
+					 "http://www.turne.com.ua/WebServices/CountryResort.asmx?WSDL",
+					 "http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL",
+					 "https://www.travelsoft.co.za/BookingEngineWebServices/BookingEngineWebService.asmx?WSDL",
+					 "http://www.memo.fr/Partenaires/MWLavService.asmx?WSDL",
+					 "http://maps.ostbayern-tourismus.de/MapAjaxService.asmx?WSDL",
+					 "http://maps.oberpfaelzerwald.de/MapAjaxService.asmx?WSDL",
+					 "http://demo.touricoholidays.com/WS/ReservationsService.asmx?wsdl",
+					 "http://www.webhotelplus.com/hotelmercado_ws/hotelmercado_ws.asmx?wsdl",
+					 "http://www.17u.cn/TongchengBookService.asmx?WSDL",
+					 "http://ws.henoo.net/holidays.asmx?WSDL",
+					 "http://www.dateblocker.com/Availability.asmx?WSDL",
+					 "http://roomfinder.aparti.ru/RoomFinder.asmx?WSDL",
+					 "http://ult-sun-api.test.delight.be/mainservice/snowapi.asmx?wsdl",
+					 "http://tv2.momondo.com/Momondo.asmx?WSDL",
+					 "http://vacationbookings.airnewzealand.ca/vaxinfo/vaxinfo.asmx?WSDL",
+					 "http://holidaybookings.airnewzealand.co.uk/vaxinfo/vaxinfo.asmx?WSDL",
+					 "http://www.resdirect.co.uk/webservices/bookinginfo.asmx?WSDL",
+					 "http://cluster.turystyka.com.pl/~pegastest2/services/index.php?wsdl",
+					 "http://www.reviews.turne.com.ua/WebServices/Review.asmx?WSDL",
+					 "http://cluster.turystyka.com.pl/~easytest2/services/index.php?wsdl",
+					 "http://ws.henoo.net/travelsearch.asmx?WSDL",
+					 "http://www.pursuit.es/genericbrand/AutoComplete.asmx?WSDL&AspxAutoDetectCookieSupport=1",
+					 "http://www.travelscene.net.au/site/ws/holidays.asmx?WSDL",
+					 "http://tour.poehalisnami.ua/Tour/WebServices/TourService.asmx?WSDL",
+					 "http://maps.b-es.de/MapAjaxService.asmx?WSDL",
+					 "http://webservices.sabre.com/wsdl/sabreXML1.0.00/tpf/OTA_HotelAvailLLS1.5.1RQ.wsdl",
+					 "http://ckmonopoly.ru/ws/?wsdl",
+					 "http://online.inna.ru:83/Service.asmx?WSDL",		
+					 "http://webservice.nnfehoo.com.cn/CommonExchangeCMP/FehooSalesOrder.asmx?WSDL",
+					 "http://www.poliform.it/webServicePoliform.asmx?wsdl",
+					 "http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+					 "http://test.bookingbooster.net/bookingbooster-ws/service/availRates.wsdl",
+					 "http://81.144.197.83/blackbox2/contract?WSDL",
+					 "http://webservice.dirs21.de/getdata.asmx?wsdl",
+					 "http://www.railtour.ch/booking/GenvasService.asmx?WSDL",
+					 "http://rep.oio.dk/kmd.dk/Ejendom/xml/wsdl/2005/10/18/BBRInformationWS.wsdl",
+					 "http://api.auction.co.kr/APIv1/Auctionservice.asmx?wsdl",
+					 "http://samo.bronni.ru/search.asmx?wsdl",
+					 "http://webservices.micros.com/ows/5.0/Availability.wsdl",
+					 "http://www.muslim-calendar.com/mcWebServices.asmx?WSDL",
+					 "http://demo.touricoholidays.com/ws/AmendmentServices.asmx?WSDL",
+					 "http://the-airport-guide.com/airportQueryService.php?wsdl",
+					 "http://shopping.jchere.com/htmlanaly/TestService-WSDL.asmx",
+					 "http://zelsoft.ru/InTourXml/BookingService.asmx?WSDL",
+					 "http://www.boroniatravel.com.au/ws/holidays.asmx?WSDL",
+					 "http://maps.bayerischer-wald.de/MapAjaxService.asmx?WSDL",
+					 "http://maps.bad-goegging.de/MapAjaxService.asmx?WSDL",
+					 "http://www.quickrooms.com/AjaxHits.asmx?WSDL",
+					 "http://81.144.197.83/blackbox2/blackbox?WSDL",
+					 "http://holidays.easyjet.com/common/controls/AutoComplete.asmx?WSDL",
+					 "http://www.destinalia.es/SWPub/Buscador.asmx?WSDL",
+					 "http://www.raj.travel/BE_WebService/BE_FlightsCity.asmx?WSDL",
+					 "http://ws-affiliate.afnt.co.uk/flights/v2_81/flights.asmx?WSDL",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightScheduleAggregatorService.wsdl",
+					 "http://webservices.sembo.se/partners/flight.asmx?WSDL",
+					 "http://ws-affiliate.afnt.co.uk/flights/v2_9/flights.asmx?WSDL",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightScheduleService.wsdl",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightRouteAggregatorService.wsdl",
+					 "http://www.pathfinder-xml.com/development/WSDL/EMSFlightMonitorMessage.wsdl",
+					 "http://ws.keyfortravel.com/webservices/K4TAirSell.asmx?wsdl",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightRouteService.wsdl",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightHistoryService.wsdl",
+					 "http://webservices.flightexplorer.com/FastTrack.asmx?WSDL",
+					 "http://217.34.152.155/FlightRoute/FlightLookup.wso?WSDL",
+					 "http://81.144.197.83/blackbox2/flightReservation?WSDL",
+					 "http://ws.henoo.net/flights.asmx?wsdl",
+					 "http://81.144.197.83/blackbox2/flightFareSearch?WSDL",
+					 "http://www.legfind.com/legfindws.asmx?WSDL",
+					 "http://tv2.momondo.com/Momondo.asmx?WSDL",
+					 "http://ws.henoo.net/travelsearch.asmx?WSDL",
+					 "http://research.caspis.net/webservices/flightdetail.asmx?wsdl",
+					 "http://eksb.jm-media.dk/App_Services/ContentProviderService.asmx?WSDL",
+					 "http://sws-challenge.org/shipper/v2/runner.wsdl",
+					 "http://query.adp.fr/ADP.WebService.horaires/horaires.asmx?WSDL",
+					 "http://ts.afnt.co.uk/travelSearch.asmx?WSDL",
+					 "http://webservice.elsyarres.com/elsyarreswebservice.asmx?WSDL",
+					 "http://planexml.flightwise.com/ws/PlaneXMLv1.asmx?WSDL",
+					 "http://81.144.197.83/blackbox2/offers?wsdl",
+					 "http://81.144.197.83/blackbox2/flightSeatsMap?WSDL",
+					 "http://81.144.197.83/blackbox2/flightFareRules?WSDL",
+					 "http://ws.keyfortravel.com/Air/airreservations.asmx?wsdl",
+					 "http://81.144.197.83/blackbox2/flightFareRules?WSDL",
+					 "http://www.pathfinder-xml.com/development/WSDL/RatingService.wsdl",
+					 "http://81.144.197.83/blackbox2/flightInfo?WSDL",
+					 "http://81.144.197.83/blackbox2/flightAvailabilitySearch?WSDL",
+					 "http://81.144.197.83/blackbox2/flightBestFareSearch?WSDL",
+					 "http://webconnect.akbartravelsonline.com/service.asmx?WSDL",
+					 "http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL",
+					 "http://81.144.197.83/blackbox2/vdwsscanner?WSDL",
+					 "http://www.legfind.com/legfindws.asmx?WSDL",
+					 "http://81.144.197.83/blackbox2/blackbox?WSDL",
+					 "http://ws.viaggiare.it/vws/Volagratis?WSDL",
+					 "http://webservices.seekda.com/providers/pathfinder-xml.com/AirlineService?tab=usenow",
+					"http://ws.keyfortravel.com/Air/airfares.asmx?wsdl",
+					 "http://www.aironline.pl/server/booking.php?wsdl",
+					 "http://www.vantagetravel.com/VTSJourney/Service1.asmx?WSDL",
+					 "https://emergo2.sabre.com/traverseWS/services/Traverseawardservice?wsdl",
+					 "http://www.95022.com/AirticketWebService.asmx?WSDL",
+					 "http://the-airport-guide.com/airportQueryService.php?wsdl",
+					 "https://emergo2.sabre.com/traverseWS/services/Traversepostingservice?wsdl",
+					 "https://www.paymentexpress.com/WS/PXWS.asmx?wsdl",
+					 "http://www.carrentals.com/services/RateShop?wsdl",
+					 "http://www.farequest.com/FASTWebService.asmx?WSDL",
+					 "http://xml.majesticusa.com/service.asmx?WSDL",
+					 "http://www.carrentals.com/services/RateShop2008A?wsdl",
+					"http://bc.ws.symphony.cz/symphony/0.9/training/ws/symphony?WSDL",
+					 "http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+					 "http://tvazteca.viajez.com/WServicesDev/EAnalyzer?WSDL",
+					 "http://webservice.rentacar-portal.com/carhireupsell.asmx?WSDL",
+					 "https://emergo2.sabre.com/traverseWS/services/Traverseactivityservice?wsdl",
+					 "https://emergo2.sabre.com/traverseWS/services/Traversepasswordservice?wsdl",
+					 "http://www.flygstolar.se/services/AteSearch.asmx?WSDL",
+					 "http://wso2.org/files/gm.wsdl",
+					 "http://samo.bronni.ru/search.asmx?wsdl",
+					 "http://59.151.1.234/Default.asmx?wsdl",
+					 "http://cts.mietwagenmarkt.de/service.asmx?wsdl",
+					 "http://www.real.com.mx/interfase/converter_esp/RoyalCancun.asmx?WSDL",
+					 "http://electronicsports.ws/ESServices/dogfightservice.asmx?WSDL",
+					 "http://online.inna.ru:83/Service.asmx?WSDL",
+					 "http://res.96135.com.cn/BE_Ws_Com.asmx?WSDL",
+					 "http://webfacturation.europeairpost.fr/Service.asmx?WSDL",
+					 "http://bc.ws.symphony.cz/symphony/0.10/training/webservices/symphony_010?WSDL",
+					 "http://xyz1.ws.symphony.cz/symphony/0.11/production/webservices/symphony_011?WSDL",
+					 "http://www.carrentals.com/services/Reservations?wsdl",
+					 "http://81.144.197.83/blackbox2/basket?WSDL",
+					 "http://tvazteca.viajez.com/WServicesDev/TicketRetrieve?WSDL",
+					 "http://zelsoft.ru/InTourXml/BookingService.asmx?WSDL",
+					 "http://www.carrentals.com/services/Locations?wsdl",
+					 "http://pos.usit.ie/destinationguide.webservice/destinationguide.asmx?WSDL",
+					 "http://zelsoft.ru/InTourXml/BookingService.asmx?WSDL",
+					 "http://cts.mietwagenmarkt.de/service.asmx?wsdl",
+					 "http://www.carrentals.com/services/Reservations?wsdl",
+					 "http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+					 "http://www.holidayautos.se/habsxml/habsexternal.asmx?wsdl",
+					 "http://rpc.test.sunnycars.com/CarRentalAgentService121/CarRentalAgentService.asmx?wsdl",
+					 "http://beeinnet.com/ws/DataProvider.asmx?WSDL",
+					 "http://distance.ktu.lt/moodle/sqi/SessionMgtSoapBindingImpl.wsdl_",
+					 "http://www.viamichelin.com/ws/services/ReverseGeocoding?wsdl",
+					 "http://ws.fraudlabs.com/fraudlabswebservice.asmx?wsdl",
+					"http://www.hopstop.com/ws?wsdl",
+					 "http://www.viamichelin.com/ws/services/FindNearbyMichelinPOI?wsdl",
+					 "http://www.wackylabs.net/mt/webservice/examplewsdl.php?wsdl",
+					 "http://ws.its.washington.edu:9090/transit/mybus/services/MybusService?wsdl",
+					 "http://dr.motionsdagbog.dk/DR/services/Statistic.asmx?wsdl",
+					 "http://www1.bjxch.gov.cn:81/VServer/MapService.asmx?WSDL",
+					 "http://www.maslan.org/TrafficService.asmx?WSDL",
+					 "http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+					 "http://secure.adpay.com/affiliate/affiliates.asmx?wsdl",
+					 "http://mlbs.net/nacgeoservices/geoservices.asmx?wsdl",
+					"http://webservices.viamichelin.com/ws2/services/FindMichelinPOI?wsdl",
+					 "http://webservices.lta.org.uk/Directory/version2/default.asmx?WSDL",
+					 "http://www.servicex.co.uk/wsRouting/Routing.asmx?wsdlhttp://geolocationdb.myemotions.ch/openGeoDB2.cfc?wsdl",
+					 "https://www.rezidorsas.com/booking/wsdl/WBIBookingServices_v1.7.wsdl",
+					 "http://ws.strikeiron.com/ZIPPostalCodeInfo5?WSDL",
+					 "https://www.tricommerce.co.uk/xGateWebservice/Services/Order.asmx?wsdl",
+					 "http://81.144.197.83/blackbox2/blackbox?WSDL",
+					 "http://houseoncrete.gr/Locations.asmx?WSDL",
+					 "http://zelsoft.ru/InTourXml/BookingService.asmx?WSDL",
+					 "http://my.newedgenetworks.com/webservice/myws.nen?wsdl",
+					 "http://gis.glastonbury-ct.gov/ceo/ArcIMSCommunicator/Request.asmx?WSDL",
+					 "http://www.pricespider.com/ScriptServices/SellerLocalStore.asmx?WSDL",
+					 "http://reswin1.isd.glam.ac.uk/STAR/SKOS_WS_EH/SKOS_WS.asmx?WSDL",
+					 "http://www.carrentals.com/services/Locations?wsdl",
+					 "http://webservices.sitra-rhonealpes.fr/SitraWS/recherche.asmx?wsdl",
+					 "http://81.144.197.83/blackbox2/basket?WSDL",
+					 "http://u-gis.dk/KortInfoService.asmx?WSDL",
+					"http://water.sdsc.edu/wateroneflow/NWIS/Data.asmx?WSDL",
+					 "http://kmswww4.kms.dk/GeoWebServiceDocumentation/service-fixed.wsdl.xml",
+					 "http://webservice.dirs21.de/getdata.asmx?wsdl",
+					 "http://www.capital-tour.ru/AgentServiceEsystemTest/service.asmx?WSDL",
+					 "http://nbii-thesaurus.ornl.gov/ws/services/SKOSThesaurusService?wsdl",
+					 "http://distance.ktu.lt/moodle/sqi/TargetSoapBindingImpl.wsdl_",
+					 "http://www.deeptraining.com/webservices/runnercalculator.asmx?wsdl",
+					 "http://codebump.com/services/placelookup.asmx?wsdl",
+					 "http://codebump.com/services/zipcodelookup.asmx?wsdl",
+					 "http://dev.websitejockey.com/DataService.asmx?WSDL",
+					 "http://centralsystem.digiscreen.ca/core/services/VenueServices?wsdl",
+					 "http://samo.bronni.ru/search.asmx?wsdl",
+					 "http://centralsystem.digiscreen.ca/core/services/ChannelServices?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_consensus.ftreedist?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_molecular_sequence.fprotdist?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_gene_frequencies.fgendist?wsdl",
+					 "http://newcenturyhomes.gr/Locations.asmx?WSDL",
+					 "http://www.ebi.ac.uk/ontology-lookup/OntologyQuery.wsdl",
+					 "http://centralsystem.digiscreen.ca/core/services/UserServices?wsdl",
+					 "http://www.carrentals.com/services/Reservations?wsdl",
+					 "http://www.newstylehomes.gr/Locations.asmx?WSDLhttp://www.servicex.co.uk/wsRouting/Routing.asmx?wsdl",
+					 "http://projects.mi.fu-berlin.de/hobit/OligoSelection.wsdl",
+					 "http://www.sircweb.cn/SircWeb/Services/Proximity/Proximity.asmx?WSDL",
+					 "http://wsdl.sbc.su.se/wsdl/zpred.wsdl",
+					 "https://www.rtsb.de/Kundenportal/Webservices/KalkulationWizardService.asmx?WSDL",
+					 "http://partnersuche.volkswagen.de/partnersearchws/search.asmx?WSDL",
+					 "http://geoaccess.and.com/geoaccess/GeoAccess.asmx?wsdl",
+					 "http://6pp.kvdb.net/services/soap/api.wsdl",
+					 "http://www.annotatedearth.com/AELocationService/location.asmx?wsdl",
+					 "http://dev.geoap.jp/GeOAP_Trial/GeOAP_Trial.asmx?wsdl",
+					 "http://quisque.com/fr/chasses/blasons/search.asmx?WSDL",
+					 "http://www.brizio31.it/webservices/Wsgeomappe/WsGeo.asmx?WSDL",
+					 "http://fboweb.com/ws/ca.asmx?WSDL",
+					 "http://www.avowlabs.com/webservices/AvowGEOCalculator/AvowGEOCalculator.asmx?WSDL",
+					 "http://zh.musipedia.org/soap/?wsdl",
+					 "http://www.allies-computing.co.uk/WebsoapNearest/Nearest.asmx?WSDL",
+					 "https://www.rtsb.de/Kundenportal/Webservices/KalkulationWizardService.asmx?WSDL",
+					 "http://agent.allstate.com/GeoServiceWebService/GeoServiceWebService.asmx?WSDL",
+					 "http://das.ae/webservices/WorldWeather.asmx?WSDL",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_distance_matrix.ffitch?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_distance_matrix.fneighbor?wsdl",
+					 "http://webservices.flightexplorer.com/FastTrack.asmx?WSDL",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_molecular_sequence.distmat?wsdl",
+					 "http://server-5.iti.gr/itsam/askitmodels/mizar.wsdlhttp://www.servicex.co.uk/wsRouting/Routing.asmx?wsdl",
+					"http://sampleserver1.arcgisonline.com/ArcGIS/services/Portland/ESRI_LandBase_WebMercator/MapServer?wsdl",
+					 "http://infomapservices.cz/infomapservices.asmx?WSDL",
+					 "https://ws1.webservices.nl/soap?wsdl",
+					 "http://maps.unep-wcmc.org/arcgis/services/WDPAv1_IdentifyResults/MapServer?wsdl",
+					 "http://www.pathfinder-xml.com/development/WSDL/AirportService.wsdl",
+					 "http://portal3.telecomh2o.com/portalcustomer.asmx?WSDL",
+					 "http://geobrain.laits.gmu.edu:8099/axis/services/Grass_Raster?wsdl",
+					 "http://almiyah.gov.ae/webservices/WorldWeather.asmx?WSDL",
+					 "http://services.arcgisonline.com/ArcGIS/services/Demographics/USA_Unemployment_Rate/MapServer?wsdl",
+					 "http://prep-mappe.regione.vda.it/ArcGIS/services/infotraffic/InfoTrafficOverview/MapServer?wsdl",
+					 "http://ws.its.washington.edu/Mybus/Mybus.asmx?wsdl",
+					 "http://geobrain.laits.gmu.edu:8099/axis/services/Grass_Vector?wsdl",
+					 "http://maps.auburn.nsw.gov.au/Exponare/Exponare.asmx?WSDL",
+					 "http://api.map-and-go.com/3.3/server?wsdl",
+					"http://client338.lab.telin.nl/wasp/services/MapPointAirialPictureService?wsdl",
+					 "http://www.apartmentsapart.com/webservice/clientservice/Version2/OTA_Service_partner.asmx?WSDL",
+					 "http://xml.truckmiles.com/WebServices/ProMilesBasicWebService.asmx?WSDL",
+					 "http://services.getpos.de/radsearch.asmx?WSDL",
+					 "http://wstest.railgo.jp/ExpService06.asmx?wsdl",
+					 "http://www.astrogeek.org/services/SolarSystem.asmx?WSDL",
+					 "http://webservices.interhome.com/WebService.asmx?WSDL",
+					 "http://www.pathfinder-xml.com/development/WSDL/FlightHistoryService.wsdl",
+					 "http://ws.ngi.gr/NGIMapServer/wsdl/all",
+					 "http://www.dyngeometry.com/WebService/GeometryInfo.asmx?WSDL",
+					 "http://the-airport-guide.com/airportQueryService.php?wsdl",
+					 "http://www.sircweb.cn/SircWeb/Services/RoutePlanner/RoutePlanner.asmx?WSDL",
+					 "http://www.funbeat.se/api/TrainingService.asmx?WSDL",
+					 "http://cert.synxis.com/interface/ota2004aservice.asmx?WSDL",
+					 "http://www.verona.miz.it/mpk4/server?wsdl",
+					 "http://dev.ctor.org/svn/soap4r/trunk/sample/soapheader/soapext_basicauth/mms_MizGIS.wsdl",
+					 "http://api.wxbug.net/weatherservice.asmx?wsdl",
+					 "http://ws.edrnet.com/order_ws/order_ws.asmx?wsdl",
+					 "http://www.sircweb.cn/SircWeb/Services/Report/Report.asmx?WSDL",
+					 "http://www.arcwebservices.com/services/v2006/WirelessLocation.wsdl",
+					 "http://developer.ebay.com/webservices/393/ebaySvc.wsdl",
+					 "http://wd.air-trak.com/ATFLEETMANAGER/ATFM.asmx?WSDL",
+					 "http://demos.eaglegis.co.nz/ArcGIS/services/Geographx/newzealandcached-pooled/MapServer?wsdl",
+					 "http://basicservices.webservice.krak.dk/map.asmx?WSDL",
+					 "http://62.254.234.4/hoseasonspartnerapi/hoseasonspartnerapi.asmx?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/nucleic_rna_folding.vrnadistance?wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_consensus.ftreedistpair?wsdl",
+					 "http://gis.vsb.cz/webcastledev/scripts/postgis.wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_molecular_sequence.fdnadist?wsdl",
+					 "http://wiki.vanguardsw.com/bin/ws.dsb?wsdl/Engineering/Mechanical/Bike%20Race%20Simulation",
+					 "http://www.viamichelin.com/ws/services/Geocoding?wsdl",
+					 "http://www.villarenters.com/villarenterswebservice/villasearch.asmx?wsdl",
+					 "http://www.channelmogo.org/portalbase/webservice/MapService.asmx?WSDL",
+					 "https://api.discountasp.net/1.0/customerapi.asmx?WSDL",
+					 "http://tanek.pri.ee/ws/examplewsdl.php?wsdl",
+					 "http://www.viamichelin.com/ws/services/RouteCalculation?wsdl",
+					 "http://www.grbhosts.org/ghostsws.asmx?WSDL",
+					 "http://mapfleet.de/svc/svc01.asmx?wsdl",
+					 "http://shipfinder.bampro.nl/service/gpstrackingwebservice.asmx?WSDL",
+					 "http://otawebservice.hotelconnect.co.uk:3380/hotelconnect.asmx?WSDL",
+					 "http://arcweb.esri.com/services/v1/RouteFinder.wsdl",
+					 "http://www.valuewizard.com/webservices/search.asmx?WSDL",
+					 "http://ws.interfax.net/admin.asmx?WSDL",
+					 "http://cert.synxis.com/interface/ChannelConnect.asmx?WSDL",
+					 "http://ws.toyota.com/DLWS/services/DealerLocatorSoapV2?wsdl",
+					 "http://www.servicex.co.uk/wsRouting/Routing.asmx?wsdl",
+					 "http://wsdl.sbc.su.se/wsdl/topcons.wsdl",
+					 "http://ws.cdyne.com/psaddress/addresslookup.asmx?WSDL",
+					 "http://www.nws.noaa.gov/forecasts/xml/DWMLgen/wsdl/ndfdXML.wsdl",
+					 "https://service.mappoint.net/secure-30/mappoint.wsdl",
+					 "http://wsembnet.vital-it.ch/soaplab2/typed/services/phylogeny_distance_matrix.fkitsch?wsdl",
+					 "http://6pp.kvdb.net/services/soap/api.wsdl",
+					 "http://ws.epostcode.com/uk/postcodeservices.asmx?WSDL",
+					 "http://voservices.net/Cosmology/ws_v1_0/Distance.asmx?wsdl",
+					 "http://www.flash-db.com/services/ws/locationByZip.wsdl",
+					 "http://rfservice.routefinda.com/RoadDistance.wsdl",
+					 "http://www.viamichelin.com/ws/services/DistanceCalculation?wsdl",
+					 "http://service.ecocoma.com/geo/distance.asmx?WSDL",
+					 "http://distance.ktu.lt/moodle/sqi/SessionMgtSoapBindingImpl.wsdl_"*/
+		};
+		  
+	     //parse all wsdls in the array
+	    String CurLine = ""; // Line read from standard in
+	    
+	    System.out.println("Enter 'q' to exit: Enter any other letter to continue ");
+	    InputStreamReader converter = new InputStreamReader(System.in);
+	    BufferedReader in = new BufferedReader(converter);
+	    try {
+	    	
+	    //CurLine = in.readLine();
+	    while (!((CurLine=in.readLine()).equals("q"))){
+	    	
+	    System.out.println("You typed: " + CurLine);
+	    System.out.println("...STARTING TO PARSE ALL WSDLs");
+	      for (String url : wsdlURL) {
+	    	  if(!url.equals(plan)){
+	    		WSDLParser3 parser=new WSDLParser3();
+	    		System.out.println("PROCESS WSDL");
+	    		Map<String, Type> newlocalMap=new HashMap<String, Type>();
+	    		parser.setLocalMap(newlocalMap);
+	    		
+	    		TypeMap WSDLTypeMap=parser.processWSDL(url, newlocalMap);
+			    parsedWsdlSet.add(WSDLTypeMap);
+			    
+			    }else{
+			    	WSDLParser3 parser2=new WSDLParser3();
+			    	System.out.println("PROCESS PLAN");
+			    	Map<String, Type> localMap2=new HashMap<String, Type>();
+			    	parser2.setLocalMap(localMap2);
+			    	TypeMap planTypeMap=parser2.processWSDL(url, localMap2);
+			    	  parsedWsdlSet.add(planTypeMap);
+			    }
+	      }	//end for loop
+	      System.out.println("...PARSING WSDLs HAS ENDED");
+	      System.out.println("...Enter q TO RUN MATCHING ALGORITHMS...");
+		}//end while loop
+	    
+	    	processWSDLSet(parsedWsdlSet, plan);
+	    	for (Iterator iterator = parsedWsdlSet.iterator(); iterator.hasNext();) {
+				TypeMap typeMap = (TypeMap) iterator.next();
+				if(typeMap.getFileName().equals(plan)){
+					System.out.println("File NAME "+typeMap.getFileName());
+					Map<String, Type> map=typeMap.getLocalMap();
+					Set<String>keys=typeMap.getLocalMap().keySet();
+					for (String string : keys) {
+						//System.out.println("PLAN COMPLEX TYPE KEY "+string);
+						Type obj=map.get(string);
+						if (obj instanceof SequenceType) {
+							
+							SequenceType type=(SequenceType)map.get(string);
+							List<Type> list=type.getElements();
+							
+							if(!list.isEmpty()){
+								System.out.println("SEQUENCE IN PLAN ("+string+")");
+								for (Type type2 : list) {
+									SimpleTypeImp stype=(SimpleTypeImp)type2;
+									System.out.println(stype.getSimple().getTypeName());
+								}
+							}else{
+								System.out.println("SEQUENCE ("+string+")IN THE PLAN HAS NO SIMPLE TYPES");
+							}
+						}else if (obj instanceof ChoiceType) {
+							
+							System.out.println("CHOICE IN PLAN("+string+")");
+							ChoiceType type=(ChoiceType)map.get(string);
+							if(!type.getElements().isEmpty()){
+								for (Type type2 : type.getElements()) {
+									SimpleTypeImp stype=(SimpleTypeImp)type2;
+									System.out.println(stype.getSimple().getTypeName());
+								}
+							}
+							
+						}else if (obj instanceof AllComplexType) {
+							System.out.println("ALL COMPLEX IN PLAN("+string+")");
+							AllComplexType type=(AllComplexType)map.get(string);
+							if(!type.getElements().isEmpty()){
+								for (Type type2 : type.getElements()) {
+									SimpleTypeImp stype=(SimpleTypeImp)type2;
+									System.out.println(stype.getSimple().getTypeName());
+								}
+							}
+						}
+					}
+				}
+				
+				
+			}
+	    	System.out.println("...ALL PROCESSING (PARSING & COMPARISON) HAS ENDED...");
+	    } catch (IOException e) {
+			
+			e.printStackTrace();
+		}
+	    
+	  } 
+ 
+  public static void processWSDLSet(final Set<TypeMap> parsedWsdlSet, String plan){
+	  TypeMap planWSDL=null;
+  	
+  	for (Iterator iterator = parsedWsdlSet.iterator(); iterator.hasNext();) {
+  		TypeMap typeMap = (TypeMap) iterator.next();
+  		
+  		if(typeMap.getFileName().equals(plan)){
+  			planWSDL=typeMap;
+  			System.out.println("PLAN "+typeMap.getFileName());
+  			break;
+  		}
+		
+  	}
+  	
+  	for (Iterator iterator = parsedWsdlSet.iterator(); iterator.hasNext();) {
+  		
+  		TypeMap typeMap = (TypeMap) iterator.next();
+  		
+  		System.out.println(typeMap.getFileName());
+  		
+  		if(plan!=null){
+  			Map<String, Type> planTypeMap=planWSDL.getLocalMap();
+  			Set<String> keySet=planTypeMap.keySet();
+  			
+  			
+  			if(!typeMap.getFileName().equals(plan)){
+  				//obtain all other parsed wsdls except the plan
+  				Map<String, Type> otherTypes=typeMap.getLocalMap();
+  				Set<String> otherTypesKEYS=otherTypes.keySet();
+  				for (String key : keySet) {
+  					
+  					//get each type in the plan and compare it with each type in the parsed WSDL
+						Type planType=planTypeMap.get(key);
+						
+						for (String otherWSDLKey : otherTypesKEYS) {
+							
+							Type wsdlType=otherTypes.get(otherWSDLKey);
+							
+							if(MappingDictionary.complexTypeEquivalence(planType, wsdlType)){
+								log4JExample.log("Complex ("+planType.getName()+") Matched ("+wsdlType.getName()+
+										") From WSDL ("+typeMap.getFileName());
+								//System.out.println("Complex ("+planType.getName()+") Matched ("+wsdlType.getName()+
+								//		") From WSDL ("+typeMap.getFileName());
+								//System.out.println();
+							}else if(MappingDictionary.isSimpleComplexTypeEquivalent(planType, wsdlType)){
+								
+								log4JExample.log("Simple Complex ("+planType.getName()+") Matched ("+wsdlType.getName()+
+										") From WSDL ("+typeMap.getFileName());
+								//System.out.println("Simple Complex ("+planType.getName()+") Matched ("+wsdlType.getName()+
+								//		") From WSDL ("+typeMap.getFileName());
+								//System.out.println();
+							}else if(MappingDictionary.simpleTypeEquivalence(planType, wsdlType)){
+								log4JExample.log("Simple Simple ("+planType.getName()+") Matched ("+wsdlType.getName()+
+										") From WSDL ("+typeMap.getFileName());
+								//System.out.println("Simple Simple ("+planType.getName()+") Matched ("+wsdlType.getName()+
+								//		") From WSDL ("+typeMap.getFileName());
+								//System.out.println();
+							}else{
+								log4JExample.log(planType.getName()+" NOT MATCHING WITH "+wsdlType.getName());
+								//System.out.println(planType.getName()+" NOT MATCHING WITH "+wsdlType.getName());
+								//System.out.println();
+							}
+							
+						}
+					}
+  			}
+  		}
+  	}
+  }
+  public  TypeMap processWSDL(String url, Map<String, Type> localMap){
+	  TypeMap typemap=null;
+	  SAXBuilder parser = new SAXBuilder();
+	  Document document;
+	  try {
+		  document = parser.build(url);
+		  process(document.getRootElement(), localMap);
+		} catch (JDOMException e) {
+			e.printStackTrace();
+		} 
+    	Map<String, Type> map= getTypeMap();
+    	    
+    	if(!map.isEmpty()){
+    	 Set<String> keys=map.keySet();
+    	   for (Iterator iterator = keys.iterator(); iterator.hasNext();) {
+    			String string = (String) iterator.next();
+    				//System.out.println("KEY "+string);
+    			Type type=map.get(string);
+    			displaySequenceTypes(type);
+    			displayChoiceTypes(type);
+    			displaySimpleTypes(type);
+    			}
+    	 	}
+    	typemap=new TypeMap(url, map);
+    	parser=null;
+    	document=null;
+    	return typemap;
+  }
+  //compare all the Types acquired from the WSDL
+  public  void compareTypes(Map<String, Type> map){
+	  if(!map.isEmpty()){
+		  
+	    	Set<String> keys=map.keySet();
+	    	Type type =  map.get("GetLargestDeclines");
+	    	SequenceType one = (SequenceType) type;
+	    	for (String key : keys) {
+	    		//if(key.equals("Variation")){
+	    			Type type2 =  map.get(key);
+			    	if (type2 instanceof SequenceType) {
+			    		
+			    		SequenceType complexType2 = (SequenceType) type2;
+			    	}
+	    		
+	    	}
+	    }
+}
+  
+//handle all SequenceTypes in the wsdl
+  public  void displaySequenceTypes(Object object){
+	  if(object!=null && object instanceof SequenceType) {
+
+			SequenceType type = (SequenceType) object;
+			List<Type> list=type.getElements();
+				
+			if(!list.isEmpty()){
+				for (Type type2 : list) {
+					SimpleTypeImp simpleType=(SimpleTypeImp)type2;
+					
+					if(simpleType.getSimple().getTypeName()!=null){
+						System.out.println( "Sequence Name ("+type.getName()+")" +
+								" Element Type("+simpleType.getSimple().getTypeName()+")");
+					}else{
+						System.out.println("User Defined Element in Sequence Named "+type.getName());
+					}
+				}
+			}else{
+				System.out.println("No Elements in the sequence "+type.getName());
+			}
+		}
+  }
+  
+  public  void displayChoiceTypes(Object object){
+	  
+	  if(object!=null && object instanceof ChoiceType) {
+
+			ChoiceType type = (ChoiceType) object;
+			List<Type> set=type.getElements();
+			
+			
+			if(!set.isEmpty()){
+				for (Type type2 : set) {
+					SimpleTypeImp simpleType=(SimpleTypeImp)type2;
+					if(simpleType.getSimple()!=null){
+						
+						System.out.println( "Choice Type Name ("+type.getName()+")" +
+								" Element ("+simpleType.getSimple().getTypeName()+")");
+					}else{
+						System.out.println("User defined Element Simple Type  for Choice Type "+type.getName());
+					}
+					
+				}
+					
+			}else{
+				System.out.println("No Elements in the Choice Type "+type.getName());
+			}
+		}
+  }
+  public void displaySimpleTypes(Object object){
+	  if(object!=null && object instanceof SimpleType) {
+
+			SimpleTypeImp type = (SimpleTypeImp) object;
+			
+			Simple simple=type.getSimple();
+			if(simple!=null){
+				System.out.println("Simple Type "+simple);
+			}else{
+				System.out.println("User defined Simple Type ");
+			}
+			
+		}
+  }
+  public void displayAllComplexTypes(Object object){
+	  if(object!=null && object instanceof AllComplexType) {
+
+			AllComplexType type = (AllComplexType) object;
+			
+			List<Type> set=type.getElements();
+			if(!set.isEmpty()){
+				for (Type type2 : set) {
+					SimpleTypeImp simpleType=(SimpleTypeImp)type2;
+					System.out.println( "All Complex Type Name ("+type.getName()+")" +
+							" Element ("+simpleType.getSimple().getTypeName()+")");	
+				}
+					
+			}else{
+				System.out.println("No Elements in the All Complex Type "+type.getName());
+			}
+		}
+  }
+  public  void setLocalMap(Map<String, Type> localMap) {
+	this.localMap = localMap;
+  }
+}
+
+/*
+public static void main(String[] args) {
+	 String plan="file:///home/lumala/Desktop/unifalgo/TypeEquivFinal/sampleFiles/TravelScenario2.xsd";
+	 // String plan="http://ws.henoo.net/flights.asmx?wsdl";
+	 
+	 final Set<TypeMap> parsedWsdlSet=new HashSet<TypeMap>();
+	 String[] wsdlURL={
+			 plan,
+			 "http://service.ecocoma.com/geo/distance.asmx?WSDL",
+			 
+			 //"file:///home/lumala/Desktop/unifalgo/TypeEquivFinal/sampleFiles/benchMarkTackerXMLSchema.xsd",
+			//"https://admin.benchmarktracker.com/services/SciLearn.asmx?WSDL",
+			//"http://ws.cdyne.com/delayedstockquote/delayedstockquote.asmx?wsdl",
+		   // "http://web.newhotel.com/WSNewHotelSrv/WSNewHotel.asmx?WSDL",
+		    //"http://www.webservicex.com/ValidateEmail.asmx?WSDL",
+			//"http://www.xignite.com/xsecurity.asmx?WSDL",
+			//"http://81.144.197.83/blackbox2/flightReservation?WSDL ",
+			//"http://ws.henoo.net/flights.asmx?wsdl", 
+			//"http://81.144.197.83/blackbox2/flightFareSearch?WSDL", 
+			//"http://www.raj.travel/BE_WebService/BE_FlightsCity.asmx?WSDL", 
+			// "http://83.138.178.95/Flights.asmx?wsdl", 
+			//"http://ws.keyfortravel.com/Air/airreservations.asmx?wsdl", 
+			//"http://81.144.197.83/blackbox2/flightSeatsMap?WSDL", 
+			//"http://81.144.197.83/blackbox2/flightFareRules?WSDL", 
+			//"http://webconnect.akbartravelsonline.com/service.asmx?WSDL", 
+			//"http://fboweb.com/ws/PlaneXMLbeta1.asmx?WSDL", 
+			//"http://sws-challenge.org/shipper/v2/runner.wsdl",
+			//"http://ts.afnt.co.uk/travelSearch.asmx?WSDL", 
+			//"http://81.144.197.83/blackbox2/offers?wsdl", 
+			//"http://81.144.197.83/blackbox2/flightInfo?WSDL",
+			//"http://ts.afnt.co.uk/travelSearch.asmx?WSDL",
+			//"http://www.elsyarres.net/elsyarreswebservice.asmx?wsdl",
+			//"http://www.legfind.com/legfindws.asmx?WSDL",
+			//"http://81.144.197.83/blackbox2/vdwsscanner?WSDL",
+			//"http://ws.viaggiare.it/vws/Volagratis?WSDL",
+			//"http://81.144.197.83/blackbox2/blackbox?WSDL",
+			//"http://tv2.momondo.com/Momondo.asmx?WSDL",
+			//"http://www.aironline.pl/server/booking.php?wsdl",
+			//"http://www.95022.com/AirticketWebService.asmx?WSDL",
+			//"http://the-airport-guide.com/airportQueryService.php?wsdl",
+			//"http://lato.rainbowtours.pl/xmlzima/XmlMod.asmx?wsdl",
+			//"https://www.paymentexpress.com/WS/PXWS.asmx?wsdl",
+			//"http://www.flygstolar.se/services/AteSearch.asmx?WSDL",
+			//"http://wso2.org/files/gm.wsdl",
+			//"http://www.avvio.com/ota/AVVIO04.wsdl",
+			//"http://www.farequest.com/FASTWebService.asmx?WSDL",
+			//"http://59.151.1.234/Default.asmx?wsdl",
+			//"http://tvazteca.viajez.com/WServicesDev/RetrievePNR?WSDL",
+			//"http://webservices.flightexplorer.com/FastTrack.asmx?WSDL",
+			//"http://217.34.152.155/FlightRoute/FlightLookup.wso?WSDL",
+			//"http://81.144.197.83/blackbox2/flightReservation?WSDL",
+			//"http://81.144.197.83/blackbox2/flightFareSearch?WSDL",
+			//"http://service.ecocoma.com/geo/distance.asmx?WSDL"
+	};
+	  
+   //parse all wsdls in the array
+  String CurLine = ""; // Line read from standard in
+  
+  System.out.println("Enter 'q' to exit: Enter any other letter to continue ");
+  InputStreamReader converter = new InputStreamReader(System.in);
+  BufferedReader in = new BufferedReader(converter);
+  try {
+  	
+  //CurLine = in.readLine();
+  while (!((CurLine=in.readLine()).equals("q"))){
+  	
+  System.out.println("You typed: " + CurLine);
+  System.out.println("...STARTING TO PARSE ALL WSDLs");
+    for (String url : wsdlURL) {
+  	  if(!url.equals(plan)){
+  		WSDLParser3 parser=new WSDLParser3();
+  		
+  		Map<String, Type> newlocalMap=new HashMap<String, Type>();
+  		parser.setLocalMap(newlocalMap);
+  		
+  		TypeMap WSDLTypeMap=parser.processWSDL(url, newlocalMap);
+		    parsedWsdlSet.add(WSDLTypeMap);
+		    
+		    }else{
+		    	WSDLParser3 parser2=new WSDLParser3();
+		    	
+		    	Map<String, Type> localMap2=new HashMap<String, Type>();
+		    	parser2.setLocalMap(localMap2);
+		    	TypeMap planTypeMap=parser2.processWSDL(url, localMap2);
+		    	  parsedWsdlSet.add(planTypeMap);
+		    }
+  	 
+    }	//end for loop
+    System.out.println("...PARSING WSDLs HAS ENDED");
+    System.out.println("...Enter q TO RUN MATCHING ALGORITHMS...");
+	}//end while loop
+  
+  	processWSDLSet(parsedWsdlSet, plan);
+  	for (Iterator iterator = parsedWsdlSet.iterator(); iterator.hasNext();) {
+			TypeMap typeMap = (TypeMap) iterator.next();
+			if(typeMap.getFileName().equals(plan)){
+				System.out.println("File NAME "+typeMap.getFileName());
+				Map<String, Type> map=typeMap.getLocalMap();
+				Set<String>keys=typeMap.getLocalMap().keySet();
+				for (String string : keys) {
+					//System.out.println("PLAN COMPLEX TYPE KEY "+string);
+					Type obj=map.get(string);
+					if (obj instanceof SequenceType) {
+						
+						SequenceType type=(SequenceType)map.get(string);
+						List<Type> list=type.getElements();
+						
+						if(!list.isEmpty()){
+							System.out.println("SEQUENCE IN PLAN ("+string+")");
+							for (Type type2 : list) {
+								SimpleTypeImp stype=(SimpleTypeImp)type2;
+								System.out.println(stype.getSimple().getTypeName());
+							}
+						}else{
+							System.out.println("SEQUENCE ("+string+")IN THE PLAN HAS NO SIMPLE TYPES");
+						}
+					}else if (obj instanceof ChoiceType) {
+						
+						System.out.println("CHOICE IN PLAN("+string+")");
+						ChoiceType type=(ChoiceType)map.get(string);
+						if(!type.getElements().isEmpty()){
+							for (Type type2 : type.getElements()) {
+								SimpleTypeImp stype=(SimpleTypeImp)type2;
+								System.out.println(stype.getSimple().getTypeName());
+							}
+						}
+						
+					}else if (obj instanceof AllComplexType) {
+						System.out.println("ALL COMPLEX IN PLAN("+string+")");
+						AllComplexType type=(AllComplexType)map.get(string);
+						if(!type.getElements().isEmpty()){
+							for (Type type2 : type.getElements()) {
+								SimpleTypeImp stype=(SimpleTypeImp)type2;
+								System.out.println(stype.getSimple().getTypeName());
+							}
+						}
+					}
+				}
+			}
+			
+			
+		}
+  	System.out.println("...ALL PROCESSING (PARSING & COMPARISON) HAS ENDED...");
+  } catch (IOException e) {
+		
+		e.printStackTrace();
+	}
+  
+} 
+*/

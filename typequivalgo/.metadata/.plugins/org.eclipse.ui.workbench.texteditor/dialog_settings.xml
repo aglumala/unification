@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="305" key="DIALOG_WIDTH"/>
+		<item value="92" key="DIALOG_Y_ORIGIN"/>
+		<item value="338" key="DIALOG_HEIGHT"/>
+		<item value="293" key="DIALOG_X_ORIGIN"/>
+		<item value="1|Sans|10.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="wrap"/>
+		<item value="false" key="isRegEx"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="incremental"/>
+		<item value="false" key="wholeword"/>
+		<item value="FileInput" key="selection"/>
+		<list key="findhistory">
+			<item value="FileInput"/>
+			<item value="input.txt"/>
+			<item value="main"/>
+			<item value="Main"/>
+			<item value="searchRequest"/>
+			<item value="TYPE TYPE"/>
+			<item value="Matched"/>
+			<item value="searchForHotel"/>
+		</list>
+		<list key="replacehistory">
+			<item value="&quot;http:"/>
+		</list>
+	</section>
+</section>

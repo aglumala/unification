@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="org.algorithm.impl.TypeMap"/>
+<fullyQualifiedTypeName name="org.algorithm.impl.ChoiceType"/>
+<fullyQualifiedTypeName name="org.algorithm.impl.AllComplexType"/>
+<fullyQualifiedTypeName name="org.algorithm.impl.SimpleTypeImp"/>
+<fullyQualifiedTypeName name="org.algorithm.impl.SequenceType"/>
+<fullyQualifiedTypeName name="java.awt.Frame"/>
+<fullyQualifiedTypeName name="java.awt.Button"/>
+<fullyQualifiedTypeName name="mypackage.P1"/>
+<fullyQualifiedTypeName name="java.io.BufferedReader"/>
+<fullyQualifiedTypeName name="java.io.FileReader"/>
+<fullyQualifiedTypeName name="java.util.List"/>
+<fullyQualifiedTypeName name="java.util.HashSet"/>
+<fullyQualifiedTypeName name="org.algorirthm.util.FileInput"/>
+<fullyQualifiedTypeName name="java.util.ArrayList"/>
+</qualifiedTypeNameHistroy>

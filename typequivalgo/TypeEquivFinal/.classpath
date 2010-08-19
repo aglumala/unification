@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/log4j-1.2.9.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jdom-1.0b8.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/xmlparserv2.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jdom-0.7.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/castor-0.9.4.2.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jaxb-api-1.5.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jaxb-xjc-2.1.10.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jaxb-impl-2.1.10.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/commonj-sdo-2.1.0.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/jaxen.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/xercesImpl.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/qname.jar"/>
+	<classpathentry kind="lib" path="/home/lumala/Desktop/unifalgo/libraries/wsdl4j.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
