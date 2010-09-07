@@ -1,0 +1,12 @@
+# template files #
+*.bst
+*.cls
+
+# compilation files #
+*.aux
+*.log
+
+
+# bib compilation files #
+*.bbl
+*.blg
